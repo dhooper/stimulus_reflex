@@ -40,7 +40,7 @@ const createSubscription = controller => {
           const urls = Array.from(
             new Set(data.operations.morph.map(m => m.stimulusReflex.url))
           )
-          if (urls.length !== 1 || urls[0] !== location.href) return
+          if (urls.length !== 1 || urls[0] !== getReflexUrl(controller)) return
         }
         CableReady.perform(data.operations)
       }
@@ -69,8 +69,8 @@ const extendStimulusController = controller => {
     // - *args - remaining arguments are forwarded to the server side reflex method
     //
     stimulate () {
-      const url = location.href
       const args = Array.from(arguments)
+      const url = getReflexUrl(this)
       const target = args.shift()
       const element =
         args[0] && args[0].nodeType === Node.ELEMENT_NODE
@@ -236,6 +236,34 @@ const getReflexRoots = element => {
       : null
   }
   return list
+}
+
+// Compute the URL corresponding to the server-side controller that will serve the updated DOM.
+// Use the data-reflex-url attribute on the reflex, controller, or an ancestor thereof.
+// If not provided, will revert to `location.href`.
+const getReflexUrl = controller => {
+  let element = controller.element, url
+  while (!url && element) {
+    const reflexUrl = element.getAttribute(
+      stimulusApplication.schema.reflexUrlAttribute
+    )
+
+    if (reflexUrl) {
+      url = reflexUrl
+    }
+
+    element = element.parentElement
+      ? element.parentElement.closest(
+          `[${stimulusApplication.schema.reflexUrlAttribute}]`
+        )
+      : null
+
+    if (!element && !url) {
+      url = location.href
+    }
+  }
+
+  return url
 }
 
 // Initializes StimulusReflex by registering the default Stimulus controller with the passed Stimulus application.
